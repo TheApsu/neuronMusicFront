@@ -1,0 +1,7 @@
+{
+  "name": "NeuronMusicFront",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

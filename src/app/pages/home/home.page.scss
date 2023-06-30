@@ -1,0 +1,10 @@
+.row-login, .row-login_col{
+  height: 100%;
+}
+.row-login{
+  .card{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}

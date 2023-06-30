@@ -1,0 +1,97 @@
+<div class="container">
+  <div class="inner">
+    <ion-card class="login-card">
+      <ion-card-content>
+        <ion-img class="logo" [src]="icon"></ion-img>
+        <ion-card-title class="title-card-login ion-margin-bottom">
+          {{ showConfirmPassword ? 'Registro' : 'Iniciar Sesión 2' }}
+        </ion-card-title>
+    
+        <form 
+          [formGroup]="loginForm" 
+          (ngSubmit)="onSubmit()"
+          (keyup.enter)="onSubmit()"
+        >
+          <div 
+            class="item confirmPassword" 
+            [ngClass]="{'showConfirmPassword': showConfirmPassword}"
+            #confirmPass
+          >
+            <ion-input 
+              labelPlacement="floating"
+              fill="outline"
+              label="Nombre" 
+              required
+              formControlName="name" 
+              type="text"
+            ></ion-input>
+          </div>
+          
+          <div class="item">
+            <ion-input 
+              labelPlacement="floating"
+              fill="outline"
+              label="E-Mail" 
+              required 
+              formControlName="email" 
+              errorText="Por favor ingresa un email valido"
+              type="text"
+            ></ion-input>
+          </div>
+          <div class="item">
+            <ion-input 
+              labelPlacement="floating"
+              fill="outline"
+              label="Contraseña" 
+              required
+              formControlName="password" 
+              type="password"
+            ></ion-input>
+          </div>
+          <div 
+            class="item confirmPassword" 
+            [ngClass]="{'showConfirmPassword': showConfirmPassword}"
+            #confirmPass
+          >
+            <ion-input 
+              labelPlacement="floating"
+              fill="outline"
+              label="Confirmar contraseña" 
+              required
+              formControlName="confirmPassword" 
+              type="password"
+            ></ion-input>
+          </div>
+  
+          <div class="ion-text-center">
+            <ion-button
+              class="login-btn" 
+              shape="round" 
+              expand="block" 
+              color="primary" 
+              type="submit" 
+              [disabled]="loginForm.invalid"
+            >
+              {{ showConfirmPassword ? 'Registrarme' : 'Iniciar Sesión' }}
+            </ion-button>
+            <ion-button 
+              expand="block" 
+              shape="round"  
+              class="forgottenPassword" 
+              (click)="forgottenPassword()" 
+              fill="outline"
+            >
+              {{ showConfirmPassword ? 'Iniciar Sesión' : 'Olvidé mi contraseña' }}
+            </ion-button>
+          </div>
+        </form>    
+      </ion-card-content>
+    </ion-card>
+    
+    <div class="ion-text-center" [ngClass]="{'hiddeRegister': showConfirmPassword}">
+      <ion-button shape="round" class="register-btn" (click)="register()" fill="clear">
+        Registrarme
+      </ion-button>
+    </div>
+  </div>
+</div>
