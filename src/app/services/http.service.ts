@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http'
 import { environment } from 'src/environments/environment';
 import { StorageService } from './storage.service';
 import { UiServices } from './ui-services';
+import { NetworkConnectionService } from './network-connection.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +13,7 @@ export class HttpService {
   private _baseApi = environment.api;
   private _clientToken = undefined;
   private _permission: any[] = [];
+  public clientData = undefined;
 
   get permission(){
     return this._permission;
@@ -33,12 +35,16 @@ export class HttpService {
     private httpClient: HttpClient,
     private storageSv: StorageService,
     private uiSv: UiServices,
+    private networkSv: NetworkConnectionService
   ) { 
     this.getToken();
   }
 
   getToken(){
-    const tokenData = this.storageSv.getLocal('user')?.token || '';
+    const user = this.storageSv.getLocal('user') || '';
+    const tokenData = user?.token;
+    this.clientData = user?.user;
+    console.log('this.clientData :>> ', this.clientData);
     this.clientToken = tokenData.token;
   }
 
@@ -60,8 +66,12 @@ export class HttpService {
               resolve(value)
             },
             error: (err) => {
+              this.uiSv.showToast('Ha ocurrido un error.');
               if(!this.clientToken){
                 reject({ token: false })
+              }else{
+                this.networkSv.status = false;
+                resolve({data: this.clientData});
               }
               reject(err)
             },
@@ -97,7 +107,9 @@ export class HttpService {
             resolve(value)
           },
           error: (err) => {
+            this.uiSv.showToast('Ha ocurrido un error.');
             reject(err)
+
           }
         })
     })

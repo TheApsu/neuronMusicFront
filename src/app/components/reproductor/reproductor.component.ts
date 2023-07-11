@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, HostListener, Input } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { Howl, Howler } from 'howler';
-import { environment } from 'src/environments/environment';
+import { IpcService } from 'src/app/services/ipc.service';
 
 @Component({
   selector: 'app-reproductor',
@@ -15,16 +15,18 @@ import { environment } from 'src/environments/environment';
   ]
 })
 export class ReproductorComponent  implements OnInit {
+  @Input() comePlaylist: any[] = [];
   @HostListener('window:resize') windowReisze(){
     this.resize();
   }
-
-  public elms = ['track', 'timer', 'duration', 'playBtn', 'pauseBtn', 'prevBtn', 'nextBtn', 'playlistBtn', 'volumeBtn', 'progress', 'bar', 'wave', 'loading', 'playlist', 'list', 'volume', 'barEmpty', 'barFull', 'sliderBtn'];
   public playlist: any[] = [];
+  public elms = ['track', 'timer', 'duration', 'playBtn', 'pauseBtn', 'prevBtn', 'nextBtn', 'playlistBtn', 'volumeBtn', 'progress', 'bar', 'wave', 'loading', 'playlist', 'list', 'volume', 'barEmpty', 'barFull', 'sliderBtn'];
   public index: number = 0;
   public elmInObj: any = {};
 
-  constructor() { }
+  constructor(
+    private ipcSv: IpcService
+  ) { }
 
   ngOnInit() {
     this.elms.forEach((elm: string ) => {
@@ -34,23 +36,18 @@ export class ReproductorComponent  implements OnInit {
       }
     });
 
-    this.player( [
-      {
-        title: 'El cielo',
-        file: 'cielo',
-        howl: null
-      },
-      {
-        title: '80s Vibe',
-        file: '80s_vibe',
-        howl: null
-      },
-      {
-        title: 'Running Out',
-        file: 'running_out',
-        howl: null
+    const data = this.comePlaylist.map(item => {
+      const obj = {
+        title: item.title,
+        name: item.name,
+        file: item.file,
+        howl: null,
+        ext: item.file.split('.')[1]
       }
-    ])
+      return obj;
+    })
+    console.log('data :>> ', data);
+    this.player( data );
 
     this.elmInObj.playBtn.addEventListener('click', () => {
       this.play();
@@ -123,6 +120,7 @@ export class ReproductorComponent  implements OnInit {
       div.className = 'list-song';
       div.innerHTML = song.title;
       div.onclick = () => {
+        console.log('Clicked on player');
         this.skipTo(playlist.indexOf(song));
       };
       this.elmInObj.list.appendChild(div);
@@ -132,70 +130,81 @@ export class ReproductorComponent  implements OnInit {
   play (index: number = 0) {
     let sound: any = undefined;
     const data = this.playlist[index];
-
     if (data.howl) {
       sound = data.howl;
-    } else {
-      const obj = {
-        elmInObj: this.elmInObj,
-        playlist: this.playlist,
-        index: this.index,
-        formatTime: this.formatTime,
-        step: this.step
-      }
-      sound = data.howl = new Howl({
-        
-        src: [`${environment.api}/${data.file}.mp3`],
-        html5: true, // Force to HTML5 so that the audio can stream in (best for large files).
-        onplay: () => {
-          // Display the duration.
-          this.elmInObj.duration.innerHTML = this.formatTime(Math.round(sound.duration()));
+      this.setConfigPlay(sound, index, data);
+    }else{
+      this.ipcSv.send('encontrar cancion', data.file);
+      this.ipcSv.once('cancion encontrada', (ev: any, file: any) => {
 
-          // Start updating the progress of the track.
-          
-          requestAnimationFrame(this.step.bind(obj));
+        console.log('playlist :>> ', data);
 
-          // Start the wave animation if we have already loaded
-          // wave.container.style.display = 'block';
-          this.elmInObj.bar.style.display = 'none';
-          this.elmInObj.pauseBtn.style.display = 'block';
-        },
-        onload: () => {
-          // Start the wave animation.
-          // wave.container.style.display = 'block';
-          this.elmInObj.bar.style.display = 'none';
-          this.elmInObj.loading.style.display = 'none';
-        },
-        onend: () => {
-          // Stop the wave animation.
-          // wave.container.style.display = 'none';
-          this.elmInObj.bar.style.display = 'block';
-          this.skip('next');
-        },
-        onpause: () => {
-          // Stop the wave animation.
-          // wave.container.style.display = 'none';
-          this.elmInObj.bar.style.display = 'block';
-        },
-        onstop: () => {
-          // Stop the wave animation.
-          // wave.container.style.display = 'none';
-          this.elmInObj.bar.style.display = 'block';
-        },
-        onseek: () =>  {
-          // Start updating the progress of the track.
-          requestAnimationFrame(this.step.bind(obj));
+        const blob = new Blob([file], {
+          type: data.ext
+        });
+        const url = URL.createObjectURL(blob);
+        const obj = {
+          elmInObj: this.elmInObj,
+          playlist: this.playlist,
+          index,
+          formatTime: this.formatTime,
+          step: this.step
         }
-      });
+
+        console.log('ipcSv Obj :>> ', obj);
+        sound = this.playlist[index].howl = new Howl({
+          src: [url],
+          html5: true, // Force to HTML5 so that the audio can stream in (best for large files).
+          onplay: () => {
+            // Display the duration.
+            this.elmInObj.duration.innerHTML = this.formatTime(Math.round(sound.duration()));
+  
+            // Start updating the progress of the track.
+            
+            requestAnimationFrame(this.step.bind(obj));
+  
+            // Start the wave animation if we have already loaded
+            // wave.container.style.display = 'block';
+            this.elmInObj.bar.style.display = 'none';
+            this.elmInObj.pauseBtn.style.display = 'block';
+          },
+          onload: () => {
+            // Start the wave animation.
+            // wave.container.style.display = 'block';
+            this.elmInObj.bar.style.display = 'none';
+            this.elmInObj.loading.style.display = 'none';
+          },
+          onend: () => {
+            // Stop the wave animation.
+            // wave.container.style.display = 'none';
+            this.elmInObj.bar.style.display = 'block';
+            this.skip('next');
+          },
+          onpause: () => {
+            // Stop the wave animation.
+            // wave.container.style.display = 'none';
+            this.elmInObj.bar.style.display = 'block';
+          },
+          onstop: () => {
+            // Stop the wave animation.
+            // wave.container.style.display = 'none';
+            this.elmInObj.bar.style.display = 'block';
+          },
+          onseek: () =>  {
+            // Start updating the progress of the track.
+            requestAnimationFrame(this.step.bind(obj));
+          }
+        });
+        this.setConfigPlay(sound, index, data);
+
+      })
     }
+  }
 
-    // Begin playing the sound.
+  setConfigPlay(sound: any, index: number, data: any){
     sound.play();
-
-    // Update the track display.
     this.elmInObj.track.innerHTML = (index + 1) + '. ' + data.title;
 
-    // Show the pause button.
     if (sound.state() === 'loaded') {
       this.elmInObj.playBtn.style.display = 'none';
       this.elmInObj.pauseBtn.style.display = 'block';
@@ -206,6 +215,8 @@ export class ReproductorComponent  implements OnInit {
     }
 
     // Keep track of the index we are currently playing.
+    console.log('index :>> ', index);
+    console.log('this.playlist[index] :>> ', this.playlist[index]);
     this.index = index;
   }
 
@@ -213,7 +224,7 @@ export class ReproductorComponent  implements OnInit {
 
     // Get the Howl we want to manipulate.
     const sound = this.playlist[this.index].howl;
-
+    console.log('sound :>> ', sound);
     // Puase the sound.
     sound.pause();
 
@@ -226,6 +237,7 @@ export class ReproductorComponent  implements OnInit {
 
     // Get the next track based on the direction of the track.
     let index = 0;
+    console.log(direction);
     if (direction === 'prev') {
       index = this.index - 1;
       if (index < 0) {
@@ -238,16 +250,17 @@ export class ReproductorComponent  implements OnInit {
       }
     }
 
+    console.log('Skipper in skip');
     this.skipTo(index);
   }
 
   skipTo(index: number) {
-    // const self = this;
-
-    // Stop the current track.
-    if (this.playlist[index].howl) {
-      this.playlist[index].howl.stop();
-    }
+   
+    this.playlist.forEach(music => {
+      if(music.howl){
+        music.howl.stop();
+      }
+    })
 
     // Reset progress.
     this.elmInObj.progress.style.width = '0%';
@@ -281,12 +294,13 @@ export class ReproductorComponent  implements OnInit {
 
   step() {
     // Get the Howl we want to manipulate.
+    console.log('this.index :>> ', this.index);
     const sound = this.playlist[this.index].howl;
 
     // Determine our current seek position.
     const seek = sound.seek() || 0;
     this.elmInObj.timer.innerHTML = this.formatTime(Math.round(seek));
-    this.elmInObj.progress.style.width = (((seek / sound.duration()) * 100) || 0) + '%';
+    this.elmInObj.progress.style.width = (((seek / sound?.duration()) * 100) || 0) + '%';
 
     // If the sound is still playing, continue stepping.
     if (sound.playing()) {
@@ -341,8 +355,6 @@ export class ReproductorComponent  implements OnInit {
   // Update the height of the wave animation.
   // These are basically some hacks to get SiriWave.js to do what we want.
   resize () {
-    const height = window.innerHeight * 0.3;
-    const width = window.innerWidth;
     // wave.height = height;
     // wave.height_2 = height / 2;
     // wave.MAX = wave.height_2 - 4;

@@ -1,8 +1,26 @@
 <ion-content [fullscreen]="true">
   <ion-grid fixed>
     <ion-row class="row-login">
-      <ion-col size="12" class="row-login_col">
-        
+      <ion-col size="12" *ngIf="playlist.length">
+        <app-reproductor
+
+          [comePlaylist]="playlist"
+        ></app-reproductor>
+      </ion-col>
+      <ion-col size="12">
+        <ion-list>
+          <ion-item *ngFor="let music of queue">
+            <ion-label>
+              <h2> {{ music.name }} </h2>
+              <p>
+                {{ music.error ? 'Ha ocurrido un error con la descarga' : ''}}
+              </p>
+            </ion-label>
+            <ion-label slot="end">
+              {{ music.progress | number:'1.1-2' }}%
+            </ion-label>
+          </ion-item>
+        </ion-list>
       </ion-col>
     </ion-row>
   </ion-grid>

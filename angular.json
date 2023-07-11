@@ -20,7 +20,8 @@
           "options": {
             "outputPath": "www",
             "allowedCommonJsDependencies": [
-              "localforage"
+              "localforage",
+              "howler"
             ],
             "index": "src/index.html",
             "main": "src/main.ts",

@@ -4,6 +4,7 @@ import { UiServices } from './ui-services';
 import { HttpService } from './http.service';
 import { StorageService } from './storage.service';
 import { NavController } from '@ionic/angular';
+import { NetworkConnectionService } from './network-connection.service';
 
 @Injectable({
   providedIn: 'root'
@@ -33,7 +34,8 @@ export class LoginService {
     private uiSv: UiServices,
     private httpSv: HttpService,
     private storageSv: StorageService,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private connectionSv: NetworkConnectionService
   ) {
   }
 
@@ -45,7 +47,6 @@ export class LoginService {
       }
       await this.uiSv.showLoading();
       const res: any = await this.httpSv.post(loginForm.value, 'auth', action)
-      console.log('res :>> ', res);
       const data = res.data;
       const userToJson = JSON.stringify(data);
       this.user = data.user;
@@ -53,6 +54,7 @@ export class LoginService {
       this.httpSv.getToken();
       await this.uiSv.loading.dismiss();
       this.setPermissions();
+      this.connectionSv.status = true;
       await this.navCtrl.navigateRoot('/home');
       return true;
     }catch(err){
@@ -63,18 +65,20 @@ export class LoginService {
   }
 
   async me(){
-    try{
-      const res: any = await this.httpSv.get('auth', 'me')
-      this.user = res.data;
-      this.setPermissions();
-      return true;
-    }catch(err: any){
-      console.error(err);
-      if(!err.token){
-        return true;
+    return new Promise(async (resolve, reject) => {
+      try{
+        const res: any = await this.httpSv.get('auth', 'me');
+        this.user = res.data;
+        this.setPermissions();
+        resolve(true);
+      }catch(err: any){
+        console.log('err :>> ', err);
+        if(!err.token){
+          reject('noToken')
+        }
+        reject(false);
       }
-      return false;
-    }
+    })
   }
 
   setPermissions(){

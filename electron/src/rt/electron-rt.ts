@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { ipcRenderer, contextBridge } from 'electron';
+import { ipcRenderer } from 'electron';
 import { EventEmitter } from 'events';
 
 ////////////////////////////////////////////////////////
@@ -82,8 +82,8 @@ Object.keys(plugins).forEach((pluginKey) => {
     });
 });
 
-contextBridge.exposeInMainWorld('CapacitorCustomPlatform', {
-  name: 'electron',
-  plugins: contextApi,
-});
+// contextBridge.exposeInMainWorld('CapacitorCustomPlatform', {
+//   name: 'electron',
+//   plugins: contextApi,
+// });
 ////////////////////////////////////////////////////////

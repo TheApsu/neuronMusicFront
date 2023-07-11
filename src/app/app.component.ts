@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
+import { NetworkConnectionService } from './services/network-connection.service';
 
 @Component({
   selector: 'app-root',
@@ -8,6 +9,15 @@ import { IonicModule } from '@ionic/angular';
   standalone: true,
   imports: [IonicModule],
 })
-export class AppComponent {
-  constructor() {}
+export class AppComponent implements OnInit {
+  constructor(
+    private networkConnectionSv: NetworkConnectionService
+  ) {
+    
+  }
+
+  ngOnInit(): void {
+    this.networkConnectionSv.observeConnection();
+  }
+
 }

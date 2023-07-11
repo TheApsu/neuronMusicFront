@@ -6,11 +6,23 @@ import {
 } from '@capacitor-community/electron';
 import chokidar from 'chokidar';
 import type { MenuItemConstructorOptions } from 'electron';
-import { app, BrowserWindow, Menu, MenuItem, nativeImage, Tray, session } from 'electron';
+import { app, BrowserWindow, Menu, MenuItem, nativeImage, Tray, session, ipcMain, dialog } from 'electron';
 import electronIsDev from 'electron-is-dev';
 import electronServe from 'electron-serve';
 import windowStateKeeper from 'electron-window-state';
 import { join } from 'path';
+import Store from "electron-store";
+import { download } from 'electron-dl';
+import fs from 'fs';
+
+Store.initRenderer();
+const store = new Store();
+if (!store.get("clicks")) {
+  store.set("clicks", 0);
+}
+
+
+
 
 // Define components for a watcher to detect when the webapp is changed so we can reload in Dev mode.
 console.log('This is my electron log'); 
@@ -49,6 +61,7 @@ export class ElectronCapacitorApp {
   private SplashScreen: CapacitorSplashScreen | null = null;
   private TrayIcon: Tray | null = null;
   private CapacitorFileConfig: CapacitorElectronConfig;
+  private _defaultPath: string;
   private TrayMenuTemplate: (MenuItem | MenuItemConstructorOptions)[] = [
     new MenuItem({ label: 'Quit App', role: 'quit' }),
   ];
@@ -103,8 +116,8 @@ export class ElectronCapacitorApp {
       join(app.getAppPath(), 'assets', process.platform === 'win32' ? 'appIcon.ico' : 'appIcon.png')
     );
     this.mainWindowState = windowStateKeeper({
-      defaultWidth: 600,
-      defaultHeight: 400,
+      defaultWidth: 1024,
+      defaultHeight: 768,
     });
     // Setup preload script path and construct our main window.
     const preloadPath = join(app.getAppPath(), 'build', 'src', 'preload.js');
@@ -113,16 +126,23 @@ export class ElectronCapacitorApp {
       show: false,
       x: this.mainWindowState.x,
       y: this.mainWindowState.y,
-      width: this.mainWindowState.width,
-      height: this.mainWindowState.height,
+      width: 1024 || this.mainWindowState.width,
+      height: 768 || this.mainWindowState.height,
       webPreferences: {
         nodeIntegration: true,
-        contextIsolation: true,
+        contextIsolation: false,
         // Use preload to inject the electron varriant overrides for capacitor plugins.
         // preload: join(app.getAppPath(), "node_modules", "@capacitor-community", "electron", "dist", "runtime", "electron-rt.js"),
         preload: preloadPath,
       },
     });
+
+    //Set download
+    this._defaultPath = join(app.getPath("appData"), 'neuron-music');
+    this.setIpcDownload();
+    this.verifyDownload();
+    this.encontrarCancion();
+
     this.mainWindowState.manage(this.MainWindow);
 
     if (this.CapacitorFileConfig.backgroundColor) {
@@ -215,6 +235,55 @@ export class ElectronCapacitorApp {
       }, 400);
     });
   }
+
+  setIpcDownload(){
+    ipcMain.on("download", async (event, info) => {
+      download(BrowserWindow.getFocusedWindow(), info.url, {
+        filename: info.file,
+        directory: this._defaultPath,
+        saveAs: false,
+        onProgress: (status) => {
+          event.sender.send("download progress", status)
+        }
+      })
+        .then(dl => {
+          event.sender.send("download progress", dl)
+        })
+        .catch(err => {
+          event.sender.send("download error", err)
+        })
+      
+    });
+  }
+
+  encontrarCancion(){
+
+    ipcMain.on("encontrar cancion", async (event, filename: string) => {
+      const filePath = join(this._defaultPath, filename);
+      if(fs.existsSync(filePath)){
+        const audio = fs.readFileSync(filePath);
+        event.sender.send('cancion encontrada', audio);
+      }
+    });
+
+  }
+
+  verifyDownload(){
+    let musicToQueue = [];
+    ipcMain.on("verify songs", async (event, info: any[]) => {
+      musicToQueue = [];
+      info.forEach(music => {
+
+        const filepath = join(this._defaultPath, music.file);
+        event.sender.send('path', filepath);
+        if(!fs.existsSync(filepath) || music.redownload){
+          musicToQueue.push(music);
+        }
+
+      })
+      event.sender.send('queue', musicToQueue);
+    });
+  }
 }
 
 // Set a CSP up for our application based on the custom scheme
@@ -231,4 +300,7 @@ export function setupContentSecurityPolicy(customScheme: string): void {
       },
     });
   });
+
+
+  
 }

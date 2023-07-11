@@ -23,10 +23,14 @@ export class SelectCompanyComponent  implements OnInit {
   ) {}
 
   async ngOnInit(){
-    const res: any = await this.httpSv.get('client/company', 'index');
-    this.companies = res.data;
-    this.open = true;
-    console.log('res :>> ', res);
+    try{
+      const res: any = await this.httpSv.get('client/company', 'index');
+      this.companies = res.data;
+      this.open = true;
+      console.log('res :>> ', res);
+    }catch(err){
+      await this.popoverController.dismiss('no-internet');
+    }
   }
 
   selectCompany(company: any){

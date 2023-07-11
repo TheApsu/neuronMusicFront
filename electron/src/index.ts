@@ -39,7 +39,10 @@ if (electronIsDev) {
 
 // Run Application
 (async () => {
+  
+  
   // Wait for electron app to be ready.
+
   await app.whenReady();
   // Security - Set Content-Security-Policy based on whether or not we are in dev mode.
   setupContentSecurityPolicy(myCapacitorApp.getCustomURLScheme());
@@ -66,5 +69,6 @@ app.on('activate', async function () {
     await myCapacitorApp.init();
   }
 });
+
 
 // Place all ipc or other electron api calls and custom functionality under this line
